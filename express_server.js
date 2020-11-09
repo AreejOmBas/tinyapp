@@ -1,6 +1,9 @@
 const express = require('express');
 const app = express();
 
+const bodyParser = require("body-parser");
+app.use(bodyParser.urlencoded({extended: true}));
+
 const PORT = 8080;
 
 app.set("view engine", "ejs");
@@ -17,6 +20,16 @@ app.get('/', (req, res) => {
 app.get("/urls", (req, res) => {
   const templateValues = {urls : urlDatabase}
   res.render('urls_index', templateValues);
+});
+
+app.get("/urls/new", (req, res) => {
+  
+  res.render('urls_new');
+});
+
+app.post("/urls/", (req, res) => {
+  
+  console.log(req.body);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
