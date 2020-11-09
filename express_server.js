@@ -17,6 +17,8 @@ app.get('/', (req, res) => {
   res.send('Hello!');
 });
 
+const generateRandomString = () => Math.random().toString(36).substring(2,8);
+
 app.get("/urls", (req, res) => {
   const templateValues = {urls : urlDatabase}
   res.render('urls_index', templateValues);
