@@ -1,31 +1,30 @@
 {
-  "name": "tinyapp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "pretest": "eslint --ignore-path .gitignore .",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/AreejOmBas/tinyapp.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/AreejOmBas/tinyapp/issues"
-  },
-  "homepage": "https://github.com/AreejOmBas/tinyapp#readme",
-  "devDependencies": {
-    "eslint": "^7.13.0",
-    "eslint-config-airbnb-base": "^14.2.1",
-    "eslint-plugin-import": "^2.22.1"
-  },
-  "dependencies": {
-    "body-parser": "^1.19.0",
-    "ejs": "^3.1.5",
-    "express": "^4.17.1"
-  }
+	"name": "tinyapp",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon -L server.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/AreejOmBas/tinyapp.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/AreejOmBas/tinyapp/issues"
+	},
+	"homepage": "https://github.com/AreejOmBas/tinyapp#readme",
+	"devDependencies": {
+		"nodemon": "^2.0.6"
+	},
+	"dependencies": {
+		"body-parser": "^1.19.0",
+		"ejs": "^3.1.5",
+		"express": "^4.17.1"
+	}
 }
