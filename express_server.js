@@ -35,10 +35,21 @@ app.post('/urls/', (req, res) => {
   urlDatabase[shortUrl] = longUrl;
   res.redirect(`urls/${shortUrl}`);
 });
+
+//Delete URL
 app.post('/urls/:shortURL/delete', (req, res) => {
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
 });
+//Update a URL
+app.post('/urls/:shortURL', (req, res) => {
+  const shortUrl = req.params.shortURL
+  const updatedURL = req.body.updatedLongURL;
+
+  urlDatabase[shortUrl] = updatedURL;
+  //res.status(200).send("ok");
+  res.redirect(`/urls`);
+})
 
 app.get('/urls/:shortURL', (req, res) => {
   const templateVars = {
