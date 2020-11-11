@@ -105,9 +105,18 @@ app.post('/register', (req, res) => {
 });
 
 //------------User Log in ------------
-app.post('/login', (req, res) => {
-
+app.get('/login', (req, res) => {
   const user = fetchUserById(usersDB, req.cookies.userid);
+
+  const templateValues = { urls: urlDatabase, user };
+
+  res.render('login', templateValues);
+ 
+});
+
+app.post('/login', (req, res) => {
+  const email = req.body.email;
+  const user = fetchUserByEmail(usersDB, email);
   res.cookie('userid', user.id);
 
   res.redirect('/urls');
@@ -116,7 +125,7 @@ app.post('/login', (req, res) => {
 //------------User Log out ------------
 app.post('/logout', (req, res) => {
 
-  res.clearCookie('username');
+  res.clearCookie('userid');
 
   res.redirect('/urls');
 });
