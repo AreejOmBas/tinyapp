@@ -11,11 +11,17 @@ app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
-//---Constatnt Variable---
+//---Constant Variable---
 const PORT = 8080;
 const urlDatabase = {
-  b2xVn2: {longURL: 'http://www.lighthouselabs.ca', userID: 'id3rt5'},
-  '9sm5xK': {longURL: 'http://www.google.com', userID: 'id3rt5'},
+  'b2xVn2': {
+    longURL: 'http://www.lighthouselabs.ca',
+    userID: 'id3rt5'
+  },
+  '9sm5xK': {
+    longURL: 'http://www.google.com',
+    userID: 'id3rt5'
+  },
 };
 const usersDB = {
   "bmn34n": {
@@ -34,7 +40,7 @@ const usersDB = {
 
 // ------------Helper Functions----------- 
 
-//<-- creats a random shortURl made of 6 Characters
+//<-- creates a random shortURl made of 6 Characters
 const generateRandomString = () => Math.random().toString(36).substring(2, 8);
 
 // --- Lookup user in DB using ID------
@@ -57,6 +63,20 @@ const fetchUserByEmail = (db, userEmail) => {
   return null;
 };
 
+const urlsForUser = (id) => {
+  let urls = {};
+
+  for (let shortURL in urlDatabase) {
+
+    if (urlDatabase[shortURL].userID === id) {
+      urls[shortURL] = urlDatabase[shortURL].longURL;
+
+    }
+  }
+  //console.log(`inside function ${urls}   `)
+  return urls;
+}
+
 //---------------------ROUTES----------------------
 // 
 app.get('/', (req, res) => {
@@ -66,8 +86,12 @@ app.get('/', (req, res) => {
 //------------URL Route --------------
 app.get('/urls', (req, res) => {
   const user = fetchUserById(usersDB, req.cookies.userid);
+  if (user) {
+    console.log(`inside get /urls : ${user.id}`);
+  }
+  const urls = (user) ? urlsForUser(user.id) : {};
 
-  const templateValues = { urls: urlDatabase, user };
+  const templateValues = { urls, user };
 
   res.render('urls_index', templateValues);
 });
@@ -111,7 +135,7 @@ app.get('/login', (req, res) => {
   const templateValues = { urls: urlDatabase, user };
 
   res.render('login', templateValues);
- 
+
 });
 
 app.post('/login', (req, res) => {
@@ -121,11 +145,11 @@ app.post('/login', (req, res) => {
 
   if (user && user.password === pass) {
     res.cookie('userid', user.id);
-  
+
     res.redirect('/urls');
-  } else  {
+  } else {
     res.sendStatus(403)
-   
+
   }
 });
 
@@ -141,22 +165,32 @@ app.post('/logout', (req, res) => {
 //------------New URL ---------------
 app.get('/urls/new', (req, res) => {
   const user = fetchUserById(usersDB, req.cookies.userid);
-  if (!user){
- 
+  if (!user) {
+
     res.redirect('/login');
   } else {
     const templateValues = { urls: urlDatabase, user };
     res.render('urls_new', templateValues);
   }
-  
+
 });
 
 //------------Submitting New URL---------
 app.post('/urls/', (req, res) => {
+  const userID = req.cookies.userid
   const shortURL = generateRandomString();
-  const longUrl = req.body.longURL;
-  urlDatabase[shortURL].longURL = longUrl;
-  res.redirect(`urls/${shortURL}`);
+  const longURL = req.body.longURL;
+  const url = {
+    longURL,
+    userID
+  };
+  if (longURL !== '') {
+    urlDatabase[shortURL] = url;
+    res.redirect(`urls/${shortURL}`);
+  } else {
+    res.redirect('/urls/new');
+  }
+  
 });
 
 //------------Delete Existing URL--------
