@@ -116,10 +116,17 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const email = req.body.email;
+  const pass = req.body.password
   const user = fetchUserByEmail(usersDB, email);
-  res.cookie('userid', user.id);
 
-  res.redirect('/urls');
+  if (user && user.password === pass) {
+    res.cookie('userid', user.id);
+  
+    res.redirect('/urls');
+  } else  {
+    res.sendStatus(403)
+   
+  }
 });
 
 //------------User Log out ------------
