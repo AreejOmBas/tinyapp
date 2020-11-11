@@ -35,6 +35,18 @@ app.get('/urls', (req, res) => {
   
   res.render('urls_index', templateValues);
 });
+//------------User Registration ------------
+app.get('/register', (req,res) => {
+  const templateValues = { urls: urlDatabase , username: req.cookies.username};
+
+  res.render('register',templateValues);
+});
+// -----Submit registration form---------
+// app.post('/register', (req,res) => {
+//   const {email, password} = req.body;
+
+//   res.redirect('/urls');
+// });
 
 //------------User Log in ------------
 app.post('/login', (req,res) => {
