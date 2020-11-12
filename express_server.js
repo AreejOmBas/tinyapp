@@ -2,13 +2,20 @@
 const bcrypt = require('bcrypt');
 const express = require('express');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 
 
 const app = express();
 
+
+
 //---- Middlewear-------
-app.use(cookieParser());
+app.use(
+  cookieSession({
+    name: 'session',
+    keys: ['key1', 'key2'],
+  })
+);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
@@ -83,7 +90,7 @@ app.get('/', (req, res) => {
 
 //------------URL Route --------------
 app.get('/urls', (req, res) => {
-  const user = fetchUserById(usersDB, req.cookies.userid);
+  const user = fetchUserById(usersDB, req.session.userid);
  
   const urls = (user) ? urlsForUser(user.id) : {};
 
@@ -94,7 +101,7 @@ app.get('/urls', (req, res) => {
 
 //------------User Registration Page ------------
 app.get('/register', (req, res) => {
-  const user = fetchUserById(usersDB, req.cookies.userid);
+  const user = fetchUserById(usersDB, req.session.userid);
 
   const templateValues = { urls: urlDatabase, user };
 
@@ -119,7 +126,7 @@ app.post('/register', (req, res) => {
     };
     
     usersDB[userId] = newUser;
-    res.cookie('userid', userId);
+    req.session.userid = userId;
 
     res.redirect('/urls');
 
@@ -128,7 +135,7 @@ app.post('/register', (req, res) => {
 
 //------------User Log in ------------
 app.get('/login', (req, res) => {
-  const user = fetchUserById(usersDB, req.cookies.userid);
+  const user = fetchUserById(usersDB, req.session.userid);
 
   const templateValues = { urls: urlDatabase, user };
 
@@ -142,7 +149,7 @@ app.post('/login', (req, res) => {
   const user = fetchUserByEmail(usersDB, email);
 
   if (user && bcrypt.compareSync(pass, user.password)) {
-    res.cookie('userid', user.id);
+    req.session.userid  =  user.Id;
     res.redirect('/urls');
   } else {
     res.sendStatus(403); //Forbidden
@@ -152,7 +159,7 @@ app.post('/login', (req, res) => {
 //------------User Log out ------------
 app.post('/logout', (req, res) => {
 
-  res.clearCookie('userid');
+  req.session = null;
 
   res.redirect('/urls');
 });
@@ -160,7 +167,7 @@ app.post('/logout', (req, res) => {
 
 //------------New URL ---------------
 app.get('/urls/new', (req, res) => {
-  const user = fetchUserById(usersDB, req.cookies.userid);
+  const user = fetchUserById(usersDB, req.session.userid);
   if (!user) {
     res.redirect('/login');
   } else {
@@ -172,7 +179,7 @@ app.get('/urls/new', (req, res) => {
 
 //------------Submitting New URL---------
 app.post('/urls/', (req, res) => {
-  const userID = req.cookies.userid;
+  const userID = req.session.userid;
   const shortURL = generateRandomString();
   const longURL = req.body.longURL;
   const url = {
@@ -209,7 +216,7 @@ app.get('/urls/:shortURL', (req, res) => {
   const longURL = urlDatabase[req.params.shortURL].longURL;
   const shortURL = req.params.shortURL;
 
-  const user = fetchUserById(usersDB, req.cookies.userid);
+  const user = fetchUserById(usersDB, req.session.userid);
   const templateValues = { longURL, shortURL, user };
   res.render('urls_show', templateValues);
 });
