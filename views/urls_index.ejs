@@ -14,6 +14,11 @@
 <body>
   <%- include('partials/_header') %>
   <main style="margin: 1em">
+    <% if (error_msg.length > 0) { %>
+      <div class="alert alert-warning" role="alert">
+        <%= error_msg %>
+        <% } %>
+      </div>
     <h3>My URLs</h3>
     
         <% if (user) { %>

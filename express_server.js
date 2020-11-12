@@ -3,9 +3,14 @@ const bcrypt = require('bcrypt');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
-
+const flash = require('connect-flash');
 
 const app = express();
+
+//------------Helper Functions-----------
+const {generateRandomString, getUserByID, getUserByEmail, findUrlsForUser} = require('./helpers');
+
+
 
 
 
@@ -18,9 +23,11 @@ app.use(
 );
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
+app.use(flash());  // <---use connect-flash for flash messages stored in session
 
 //---Constant Variable---
 const PORT = 8080;
+
 const urlDatabase = {
   'b2xVn2': {
     longURL: 'http://www.lighthouselabs.ca',
@@ -30,82 +37,69 @@ const urlDatabase = {
     longURL: 'http://www.google.com',
     userID: 'id3rt5'
   },
-};
-const usersDB = {
-  "bmn34n": {
-    id: "bmn34n",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+  '3ght5w': {
+    longURL: 'http://www.amazon.com',
+    userID: '29k7c8'
   },
-  "id3rt5": {
-    id: "id3rt5",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
+  'kj34sd': {
+    longURL: 'http://www.github.com',
+    userID: '29k7c8'
   }
 };
 
-
-
-// ------------Helper Functions-----------
-
-//<-- creates a random shortURl made of 6 Characters
-const generateRandomString = () => Math.random().toString(36).substring(2, 8);
-
-// --- Lookup user in DB using ID------
-const fetchUserById = (db, userId) => {
-  for (let id in db) {
-    if (id === userId) {
-      return db[id];
-    }
+const usersDB = {
+  'bmn34n': {
+    id: 'bmn34n',
+    email: 'user@example.com',
+    password: 'purple-monkey-dinosaur'
+  },
+  'id3rt5': {
+    id: 'id3rt5',
+    email: 'user2@example.com',
+    password: 'dishwasher-funk'
+  },
+  '29k7c8': {
+    id: '29k7c8',
+    email: 'user3@example.com',
+    password:'$2b$10$7y7IeLg9xlPq7KCziOU85.ZlmyUjjpYCthTtlsgkdWkq0z5eB7KAi' // 1234
   }
-  return null;
-};
 
-// --- Lookup user in DB using Email------
-const fetchUserByEmail = (db, userEmail) => {
-  for (let id in db) {
-    if (db[id].email === userEmail) {
-      return db[id];
-    }
-  }
-  return null;
-};
-
-const urlsForUser = (id) => {
-  let urls = {};
-
-  for (let shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === id) {
-      urls[shortURL] = urlDatabase[shortURL].longURL;
-    }
-  }
-  return urls;
 };
 
 //---------------------ROUTES----------------------
 
+//--- ROOT Route----
 app.get('/', (req, res) => {
-  res.redirect('/urls');
+  const user = getUserByID(req.session.userid, usersDB);
+  if (!user) {
+    req.flash('error_msg','Please Login first');
+    res.redirect('/login');
+  } else {
+    res.redirect('/urls');
+  }
 });
 
 //------------URL Route --------------
 app.get('/urls', (req, res) => {
-  const user = fetchUserById(usersDB, req.session.userid);
- 
-  const urls = (user) ? urlsForUser(user.id) : {};
 
-  const templateValues = { urls, user };
-
+  const user = getUserByID(req.session.userid, usersDB); //<---current logged in user if any
+  const urls = (user) ? findUrlsForUser(user.id, urlDatabase) : {}; //<--- urls for the logged in user if any
+  res.locals.error_msg = req.flash('error_msg');
+  const templateValues = { urls, user }; //<---- values to pass to html pages
   res.render('urls_index', templateValues);
 });
 
 //------------User Registration Page ------------
 app.get('/register', (req, res) => {
-  const user = fetchUserById(usersDB, req.session.userid);
+  const user = getUserByID(req.session.userid, usersDB);
 
-  const templateValues = { urls: urlDatabase, user };
-
-  res.render('register', templateValues);
+  if (user) {
+    res.redirect('/urls');
+  } else {
+    const templateValues = { urls: urlDatabase, user };
+    res.locals.error_msg = req.flash('error_msg');
+    res.render('register', templateValues);
+  }
 });
 
 // -----Submit registration form---------
@@ -113,19 +107,25 @@ app.post('/register', (req, res) => {
 
   const { email, password } = req.body;
   if (email === '' || password === '') {
-    res.sendStatus(400);
-  } else if (fetchUserByEmail(usersDB, email)) {
-    res.sendStatus(400);
+    req.flash('error_msg','Please enter valid inputs');
+    res.redirect('/register');
+
+  } else if (getUserByEmail(email, usersDB)) {
+    req.flash('error_msg','Email Already Exists');
+    res.redirect('/register');
+
   } else {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const userId = generateRandomString();
+    
     const newUser = {
       id: userId,
       email,
       password: hashedPassword
     };
-    
+
     usersDB[userId] = newUser;
+
     req.session.userid = userId;
 
     res.redirect('/urls');
@@ -133,45 +133,49 @@ app.post('/register', (req, res) => {
   }
 });
 
-//------------User Log in ------------
+//------------User Log in --------------------------
 app.get('/login', (req, res) => {
-  const user = fetchUserById(usersDB, req.session.userid);
+  const user = getUserByID(req.session.userid, usersDB);
 
-  const templateValues = { urls: urlDatabase, user };
-
-  res.render('login', templateValues);
+  if (user) {
+    res.redirect('/urls');
+  } else {
+    res.locals.error_msg = req.flash('error_msg');
+    const templateValues = { urls: urlDatabase, user };
+    res.render('login', templateValues);
+  }
+  
 
 });
-
+//------ User Submit Login Form-----------------
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const pass = req.body.password;
-  const user = fetchUserByEmail(usersDB, email);
+  const user = getUserByEmail(email, usersDB);
 
   if (user && bcrypt.compareSync(pass, user.password)) {
-    req.session.userid  =  user.Id;
+    req.session.userid  =  user.id;
     res.redirect('/urls');
   } else {
-    res.sendStatus(403); //Forbidden
-  }
+    req.flash('error_msg','No matching Email/Password found');
+    res.redirect('/login');
+   }
 });
 
 //------------User Log out ------------
 app.post('/logout', (req, res) => {
-
   req.session = null;
-
   res.redirect('/urls');
 });
 
-
 //------------New URL ---------------
 app.get('/urls/new', (req, res) => {
-  const user = fetchUserById(usersDB, req.session.userid);
+  const user = getUserByID(req.session.userid, usersDB);
   if (!user) {
     res.redirect('/login');
   } else {
     const templateValues = { urls: urlDatabase, user };
+    res.locals.error_msg = req.flash('error_msg');
     res.render('urls_new', templateValues);
   }
 
@@ -179,17 +183,23 @@ app.get('/urls/new', (req, res) => {
 
 //------------Submitting New URL---------
 app.post('/urls/', (req, res) => {
-  const userID = req.session.userid;
-  const shortURL = generateRandomString();
+
+  const user = getUserByID(req.session.userid, usersDB);
+  const userID = user.id;
+  const shortURL = generateRandomString(); // generate new url 
   const longURL = req.body.longURL;
   const url = {
     longURL,
     userID
   };
-  if (longURL !== '') {
+  if (!user) {
+    req.flash('error_msg','Please Log in first');
+    res.redirect('/login');
+  } else if (longURL !== '') {
     urlDatabase[shortURL] = url;
     res.redirect(`urls/${shortURL}`);
   } else {
+    req.flash('error_msg','Please Enter a valid Long url');
     res.redirect('/urls/new');
   }
 
@@ -197,34 +207,89 @@ app.post('/urls/', (req, res) => {
 
 //------------Delete Existing URL--------
 app.post('/urls/:shortURL/delete', (req, res) => {
-  delete urlDatabase[req.params.shortURL];
-  res.redirect('/urls');
-});
 
-//--------Update an URL---------------
-app.post('/urls/:shortURL', (req, res) => {
+  const user = getUserByID(req.session.userid, usersDB);
   const shortURL = req.params.shortURL;
-  const updatedURL = req.body.updatedLongURL;
 
-  urlDatabase[shortURL].longURL = updatedURL;
-
-  res.redirect(`/urls`);
+  if (!user) {
+    req.flash('error_msg','Please Log in first');
+    res.redirect('/login');
+  } else {
+    const urls = findUrlsForUser(user.id,urlDatabase);
+    if (urls[shortURL] !== undefined) {
+      delete urlDatabase[req.params.shortURL];
+      res.redirect('/urls');
+     
+    } else {
+      req.flash('error_msg','You do not own this Short Url');
+      res.redirect('/urls');
+    }
+  }
+  
 });
 
 //----Show a page for a specific shortURL------
 app.get('/urls/:shortURL', (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL].longURL;
-  const shortURL = req.params.shortURL;
 
-  const user = fetchUserById(usersDB, req.session.userid);
-  const templateValues = { longURL, shortURL, user };
-  res.render('urls_show', templateValues);
+  const user = getUserByID(req.session.userid, usersDB);
+  const shortURL = req.params.shortURL;
+  if (!user) {
+    req.flash('error_msg','Please Log in first');
+    res.redirect('/login');
+  } else {
+    const urls = findUrlsForUser(user.id,urlDatabase);
+    if (urls && urls[shortURL] !== undefined) {
+      const longURL = urlDatabase[req.params.shortURL].longURL;
+      const templateValues = { longURL, shortURL, user };
+      res.locals.error_msg = req.flash('error_msg');
+      res.render('urls_show', templateValues);
+    } else {
+      req.flash('error_msg','Requested Short Url either not found or you do not have access to it.');
+      res.redirect('/urls');
+    }
+  }
+  
+  
+});
+
+//--------Update an URL---------------
+app.post('/urls/:shortURL', (req, res) => {
+
+  const user = getUserByID(req.session.userid, usersDB);
+  const shortURL = req.params.shortURL;
+  const updatedURL = req.body.updatedLongURL;
+  if (!user) {
+    req.flash('error_msg','Please Log in first to update the Url');
+    res.redirect('/login');
+  } else {
+    const urls = findUrlsForUser(user.id,urlDatabase);
+    if (updatedURL === '') {
+      req.flash('error_msg','Please Enter a valid URL');
+        res.redirect(`/urls/${shortURL}`);
+    } else if (urls[shortURL] !== undefined) { // <-- if User does not own the Short url
+      urlDatabase[shortURL].longURL = updatedURL;
+      res.redirect(`/urls`);
+      
+    } else { 
+      
+      req.flash('error_msg','You do not own this Short Url');
+      res.redirect('/urls');
+      
+    }
+  }
 });
 
 //----- Redirect to the longUrl when requesting the shortURL-------
 app.get('/u/:shortURL', (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL].longURL;
-  res.redirect(longURL);
+
+  if (urlDatabase.hasOwnProperty([req.params.shortURL])){
+    const longURL = urlDatabase[req.params.shortURL].longURL;
+    res.redirect(longURL);
+  } else {
+    req.flash('error_msg','Requested Url not found.');
+      res.redirect('/urls');
+  }
+  
 });
 
 //------ Set Up the Server----------
