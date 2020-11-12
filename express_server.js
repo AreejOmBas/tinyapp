@@ -1,4 +1,5 @@
 //---- Required Libraries --------
+const bcrypt = require('bcrypt');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
@@ -34,11 +35,11 @@ const usersDB = {
     email: "user2@example.com",
     password: "dishwasher-funk"
   }
-}
+};
 
 
 
-// ------------Helper Functions----------- 
+// ------------Helper Functions-----------
 
 //<-- creates a random shortURl made of 6 Characters
 const generateRandomString = () => Math.random().toString(36).substring(2, 8);
@@ -67,28 +68,23 @@ const urlsForUser = (id) => {
   let urls = {};
 
   for (let shortURL in urlDatabase) {
-
     if (urlDatabase[shortURL].userID === id) {
       urls[shortURL] = urlDatabase[shortURL].longURL;
-
     }
   }
-  //console.log(`inside function ${urls}   `)
   return urls;
-}
+};
 
 //---------------------ROUTES----------------------
-// 
+
 app.get('/', (req, res) => {
-  res.send('Hello!');
+  res.redirect('/urls');
 });
 
 //------------URL Route --------------
 app.get('/urls', (req, res) => {
   const user = fetchUserById(usersDB, req.cookies.userid);
-  if (user) {
-    console.log(`inside get /urls : ${user.id}`);
-  }
+ 
   const urls = (user) ? urlsForUser(user.id) : {};
 
   const templateValues = { urls, user };
@@ -114,12 +110,14 @@ app.post('/register', (req, res) => {
   } else if (fetchUserByEmail(usersDB, email)) {
     res.sendStatus(400);
   } else {
+    const hashedPassword = bcrypt.hashSync(password, 10);
     const userId = generateRandomString();
     const newUser = {
       id: userId,
       email,
-      password
+      password: hashedPassword
     };
+    
     usersDB[userId] = newUser;
     res.cookie('userid', userId);
 
@@ -140,16 +138,14 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const email = req.body.email;
-  const pass = req.body.password
+  const pass = req.body.password;
   const user = fetchUserByEmail(usersDB, email);
 
-  if (user && user.password === pass) {
+  if (user && bcrypt.compareSync(pass, user.password)) {
     res.cookie('userid', user.id);
-
     res.redirect('/urls');
   } else {
-    res.sendStatus(403)
-
+    res.sendStatus(403); //Forbidden
   }
 });
 
@@ -166,7 +162,6 @@ app.post('/logout', (req, res) => {
 app.get('/urls/new', (req, res) => {
   const user = fetchUserById(usersDB, req.cookies.userid);
   if (!user) {
-
     res.redirect('/login');
   } else {
     const templateValues = { urls: urlDatabase, user };
@@ -177,7 +172,7 @@ app.get('/urls/new', (req, res) => {
 
 //------------Submitting New URL---------
 app.post('/urls/', (req, res) => {
-  const userID = req.cookies.userid
+  const userID = req.cookies.userid;
   const shortURL = generateRandomString();
   const longURL = req.body.longURL;
   const url = {
@@ -190,7 +185,7 @@ app.post('/urls/', (req, res) => {
   } else {
     res.redirect('/urls/new');
   }
-  
+
 });
 
 //------------Delete Existing URL--------
