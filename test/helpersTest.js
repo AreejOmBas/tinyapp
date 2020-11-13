@@ -25,16 +25,16 @@ const testUrlDatabase = {
   }
 };
 
-describe('getUserByEmail', function () {
-  it('should return a user with valid email', function () {
-    const user = getUserByEmail("user@example.com", testUsers)
+describe('getUserByEmail', function() {
+  it('should return a user with valid email', function() {
+    const user = getUserByEmail("user@example.com", testUsers);
     const expectedOutput = "userRandomID";
 
     assert.equal(expectedOutput, user.id);
   });
 
-  it('should return a undefined with invalid email', function () {
-    const user = getUserByEmail("user3@example.com", testUsers)
+  it('should return a undefined with invalid email', function() {
+    const user = getUserByEmail("user3@example.com", testUsers);
     const expectedOutput = undefined;
 
     assert.equal(expectedOutput, user);
@@ -42,9 +42,9 @@ describe('getUserByEmail', function () {
 });
 
 
-describe('getUserById', function () {
-  it('should return a user with valid id', function () {
-    const user = getUserByID("userRandomID", testUsers)
+describe('getUserById', function() {
+  it('should return a user with valid id', function() {
+    const user = getUserByID("userRandomID", testUsers);
     const expectedOutput = {
       id: "userRandomID",
       email: "user@example.com",
@@ -53,30 +53,30 @@ describe('getUserById', function () {
     assert.deepEqual(expectedOutput, user);
   });
 
-  it('should return a undefined with invalid id', function () {
-    const user = getUserByID("userid", testUsers)
+  it('should return a undefined with invalid id', function() {
+    const user = getUserByID("userid", testUsers);
     const expectedOutput = undefined;
 
     assert.equal(expectedOutput, user);
   });
 });
 
-describe('findUrlsForUser', function () {
-  it('should return a url object for user', function () {
-    const user = getUserByEmail("user@example.com", testUsers)
+describe('findUrlsForUser', function() {
+  it('should return a url object for user', function() {
+    const user = getUserByEmail("user@example.com", testUsers);
     const urls = findUrlsForUser(user.id, testUrlDatabase);
     const expectedOutput = {
-      'b2xVn2':'http://www.lighthouselabs.ca'
+      'b2xVn2': 'http://www.lighthouselabs.ca'
       ,
-      '9sm5xK':  'http://www.google.com'
-    
+      '9sm5xK': 'http://www.google.com'
+
     };
 
     assert.deepEqual(expectedOutput, urls);
   });
 
-  it('should return a empty url with user not having any url', function () {
-    const user = getUserByEmail("user2@example.com", testUsers)
+  it('should return a empty url with user not having any url', function() {
+    const user = getUserByEmail("user2@example.com", testUsers);
     const urls = findUrlsForUser(user.id, testUrlDatabase);
     const expectedOutput = {};
 

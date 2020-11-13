@@ -1,18 +1,14 @@
 //---- Required Libraries --------
+const flash = require('connect-flash');
 const bcrypt = require('bcrypt');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
-const flash = require('connect-flash');
 
 const app = express();
 
 //------------Helper Functions-----------
-const {generateRandomString, getUserByID, getUserByEmail, findUrlsForUser} = require('./helpers');
-
-
-
-
+const { generateRandomString, getUserByID, getUserByEmail, findUrlsForUser } = require('./helpers');
 
 //---- Middlewear-------
 app.use(
@@ -25,7 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 app.use(flash());  // <---use connect-flash for flash messages stored in session
 
-//---Constant Variable---
+//---Constant Variables---
 const PORT = 8080;
 
 const urlDatabase = {
@@ -61,7 +57,7 @@ const usersDB = {
   '29k7c8': {
     id: '29k7c8',
     email: 'user3@example.com',
-    password:'$2b$10$7y7IeLg9xlPq7KCziOU85.ZlmyUjjpYCthTtlsgkdWkq0z5eB7KAi' // 1234
+    password: '$2b$10$7y7IeLg9xlPq7KCziOU85.ZlmyUjjpYCthTtlsgkdWkq0z5eB7KAi' // 1234
   }
 
 };
@@ -72,8 +68,9 @@ const usersDB = {
 app.get('/', (req, res) => {
   const user = getUserByID(req.session.userid, usersDB);
   if (!user) {
-    req.flash('error_msg','Please Login first');
+    req.flash('errorMsg', 'Please Login first');
     res.redirect('/login');
+
   } else {
     res.redirect('/urls');
   }
@@ -84,7 +81,7 @@ app.get('/urls', (req, res) => {
 
   const user = getUserByID(req.session.userid, usersDB); //<---current logged in user if any
   const urls = (user) ? findUrlsForUser(user.id, urlDatabase) : {}; //<--- urls for the logged in user if any
-  res.locals.error_msg = req.flash('error_msg');
+  res.locals.errorMsg = req.flash('errorMsg');
   const templateValues = { urls, user }; //<---- values to pass to html pages
   res.render('urls_index', templateValues);
 });
@@ -95,9 +92,10 @@ app.get('/register', (req, res) => {
 
   if (user) {
     res.redirect('/urls');
+
   } else {
     const templateValues = { urls: urlDatabase, user };
-    res.locals.error_msg = req.flash('error_msg');
+    res.locals.errorMsg = req.flash('errorMsg');//<--- to show error messages if any
     res.render('register', templateValues);
   }
 });
@@ -107,29 +105,25 @@ app.post('/register', (req, res) => {
 
   const { email, password } = req.body;
   if (email === '' || password === '') {
-    req.flash('error_msg','Please enter valid inputs');
+    req.flash('errorMsg', 'Please enter valid inputs');
     res.redirect('/register');
 
   } else if (getUserByEmail(email, usersDB)) {
-    req.flash('error_msg','Email Already Exists');
+    req.flash('errorMsg', 'Email Already Exists');
     res.redirect('/register');
 
   } else {
     const hashedPassword = bcrypt.hashSync(password, 10);
     const userId = generateRandomString();
-    
+
     const newUser = {
       id: userId,
       email,
       password: hashedPassword
     };
-
     usersDB[userId] = newUser;
-
     req.session.userid = userId;
-
     res.redirect('/urls');
-
   }
 });
 
@@ -139,12 +133,13 @@ app.get('/login', (req, res) => {
 
   if (user) {
     res.redirect('/urls');
+
   } else {
-    res.locals.error_msg = req.flash('error_msg');
+    res.locals.errorMsg = req.flash('errorMsg');//<--- to show error messages if any
     const templateValues = { urls: urlDatabase, user };
     res.render('login', templateValues);
   }
-  
+
 
 });
 //------ User Submit Login Form-----------------
@@ -154,12 +149,13 @@ app.post('/login', (req, res) => {
   const user = getUserByEmail(email, usersDB);
 
   if (user && bcrypt.compareSync(pass, user.password)) {
-    req.session.userid  =  user.id;
+    req.session.userid = user.id;
     res.redirect('/urls');
+
   } else {
-    req.flash('error_msg','No matching Email/Password found');
+    req.flash('errorMsg', 'No matching Email/Password found');
     res.redirect('/login');
-   }
+  }
 });
 
 //------------User Log out ------------
@@ -173,9 +169,10 @@ app.get('/urls/new', (req, res) => {
   const user = getUserByID(req.session.userid, usersDB);
   if (!user) {
     res.redirect('/login');
+
   } else {
     const templateValues = { urls: urlDatabase, user };
-    res.locals.error_msg = req.flash('error_msg');
+    res.locals.errorMsg = req.flash('errorMsg');//<--- to show error messages if any
     res.render('urls_new', templateValues);
   }
 
@@ -186,20 +183,22 @@ app.post('/urls/', (req, res) => {
 
   const user = getUserByID(req.session.userid, usersDB);
   const userID = user.id;
-  const shortURL = generateRandomString(); // generate new url 
+  const shortURL = generateRandomString(); // generate new url
   const longURL = req.body.longURL;
   const url = {
     longURL,
     userID
   };
   if (!user) {
-    req.flash('error_msg','Please Log in first');
+    req.flash('errorMsg', 'Please Log in first');
     res.redirect('/login');
+
   } else if (longURL !== '') {
     urlDatabase[shortURL] = url;
     res.redirect(`urls/${shortURL}`);
+
   } else {
-    req.flash('error_msg','Please Enter a valid Long url');
+    req.flash('errorMsg', 'Please Enter a valid Long url');
     res.redirect('/urls/new');
   }
 
@@ -212,20 +211,20 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
 
   if (!user) {
-    req.flash('error_msg','Please Log in first');
+    req.flash('errorMsg', 'Please Log in first');
     res.redirect('/login');
   } else {
-    const urls = findUrlsForUser(user.id,urlDatabase);
+    const urls = findUrlsForUser(user.id, urlDatabase);
     if (urls[shortURL] !== undefined) {
       delete urlDatabase[req.params.shortURL];
       res.redirect('/urls');
-     
+
     } else {
-      req.flash('error_msg','You do not own this Short Url');
+      req.flash('errorMsg', 'You do not own this Short Url');
       res.redirect('/urls');
     }
   }
-  
+
 });
 
 //----Show a page for a specific shortURL------
@@ -234,22 +233,23 @@ app.get('/urls/:shortURL', (req, res) => {
   const user = getUserByID(req.session.userid, usersDB);
   const shortURL = req.params.shortURL;
   if (!user) {
-    req.flash('error_msg','Please Log in first');
+    req.flash('errorMsg', 'Please Log in first');
     res.redirect('/login');
   } else {
-    const urls = findUrlsForUser(user.id,urlDatabase);
+    const urls = findUrlsForUser(user.id, urlDatabase);
     if (urls && urls[shortURL] !== undefined) {
       const longURL = urlDatabase[req.params.shortURL].longURL;
       const templateValues = { longURL, shortURL, user };
-      res.locals.error_msg = req.flash('error_msg');
+      res.locals.errorMsg = req.flash('errorMsg');
       res.render('urls_show', templateValues);
+
     } else {
-      req.flash('error_msg','Requested Short Url either not found or you do not have access to it.');
+      req.flash('errorMsg', 'Requested Short Url either not found or you do not have access to it.');
       res.redirect('/urls');
     }
   }
-  
-  
+
+
 });
 
 //--------Update an URL---------------
@@ -259,22 +259,21 @@ app.post('/urls/:shortURL', (req, res) => {
   const shortURL = req.params.shortURL;
   const updatedURL = req.body.updatedLongURL;
   if (!user) {
-    req.flash('error_msg','Please Log in first to update the Url');
+    req.flash('errorMsg', 'Please Log in first to update the Url');
     res.redirect('/login');
   } else {
-    const urls = findUrlsForUser(user.id,urlDatabase);
+    const urls = findUrlsForUser(user.id, urlDatabase);
     if (updatedURL === '') {
-      req.flash('error_msg','Please Enter a valid URL');
-        res.redirect(`/urls/${shortURL}`);
+      req.flash('errorMsg', 'Please Enter a valid URL');
+      res.redirect(`/urls/${shortURL}`);
+
     } else if (urls[shortURL] !== undefined) { // <-- if User does not own the Short url
       urlDatabase[shortURL].longURL = updatedURL;
       res.redirect(`/urls`);
-      
-    } else { 
-      
-      req.flash('error_msg','You do not own this Short Url');
+
+    } else {
+      req.flash('errorMsg', 'You do not own this Short Url');
       res.redirect('/urls');
-      
     }
   }
 });
@@ -282,14 +281,15 @@ app.post('/urls/:shortURL', (req, res) => {
 //----- Redirect to the longUrl when requesting the shortURL-------
 app.get('/u/:shortURL', (req, res) => {
 
-  if (urlDatabase.hasOwnProperty([req.params.shortURL])){
+  if (urlDatabase.hasOwnProperty([req.params.shortURL])) {
     const longURL = urlDatabase[req.params.shortURL].longURL;
     res.redirect(longURL);
+    
   } else {
-    req.flash('error_msg','Requested Url not found.');
-      res.redirect('/urls');
+    req.flash('errorMsg', 'Requested Url not found.');
+    res.redirect('/urls');
   }
-  
+
 });
 
 //------ Set Up the Server----------
